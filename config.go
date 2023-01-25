@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -11,16 +12,16 @@ import (
 var GlobalConfig Config
 
 type Config struct {
-	NetworkPrefixes []string
-	PollTiming      time.Duration
+	NetworkPrefixes []string         `envconfig:"NETWORK_PREFIXES"`
 	NetworkConfigs  []*NetworkConfig `ignored:"true"`
 }
 
 type NetworkConfig struct {
-	Name       string `ignored:"true"`
-	URL        string
-	Addresses  []string
-	LowerLimit uint64
+	Name         string        `ignored:"true"`
+	URL          string        `envconfig:"URL"`
+	Addresses    []string      `envconfig:"ADDRESSES"`
+	LowerLimit   float64       `envconfig:"LOWER_LIMIT"`
+	PollInterval time.Duration `envconfig:"POLL_INTERVAL"`
 }
 
 func loadConfig() error {
@@ -32,8 +33,14 @@ func loadConfig() error {
 	if err != nil {
 		return err
 	}
+	log.Debug().Interface("Prefixes", GlobalConfig.NetworkPrefixes).Msg("Loaded Global Config")
+	if len(GlobalConfig.NetworkPrefixes) == 0 {
+		return fmt.Errorf("found no network prefixes")
+	}
+
 	for _, confPrefix := range GlobalConfig.NetworkPrefixes {
 		var netConf NetworkConfig
+		netConf.Name = confPrefix
 		err = envconfig.Process(confPrefix, &netConf)
 		if err != nil {
 			return err
