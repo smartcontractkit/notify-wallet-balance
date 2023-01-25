@@ -1,0 +1,25 @@
+name: Linting
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Only run 1 of this workflow at a time per PR
+concurrency:
+  group: linting-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  golangci:
+    name: Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Code
+        uses: actions/checkout@v3
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3.3.1
+      - name: StaticCheck
+        uses: dominikh/staticcheck-action@v1.2.0
+        with:
+          version: "2022.1.3"
