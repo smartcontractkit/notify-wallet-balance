@@ -144,7 +144,7 @@ const (
 				"type": "section",
 				"text": {
 					"type": "mrkdwn",
-					"text": "Network: %s\nAddress: %s\nBalance: %s ETH\nLimit: %s"
+					"text": "*Network*: %s\n*Address*: %s\n*Balance*: %s ETH\n*Limit*: %s ETH"
 				}
 			}
 		]
