@@ -47,18 +47,22 @@ func main() {
 		c.Close()
 		go monitorNetwork(networkConf, mainErrChan)
 	}
-	err = notifyStart()
-	if err != nil {
+	if err = notifyStart(); err != nil {
 		mainErrChan <- err
 	}
 
 	signal.Notify(terminationChan, syscall.SIGINT, syscall.SIGTERM)
 	for {
 		select {
-		case err = <-mainErrChan:
-			log.Fatal().Err(err).Msg("Unrecoverable Error Monitoring Chain")
+		case mainErr := <-mainErrChan:
+			if err = notifyStop(); err != nil {
+				log.Error().Err(err).Msg("Error while trying to notify of stopped runner")
+			}
+			log.Fatal().Err(mainErr).Msg("Unrecoverable Error Monitoring Chain")
 		case <-terminationChan:
-			notifyStop()
+			if err = notifyStop(); err != nil {
+				log.Error().Err(err).Msg("Error while trying to notify of stopped runner")
+			}
 			log.Fatal().Msg("Monitoring Killed!")
 		}
 	}
@@ -81,7 +85,7 @@ func monitorNetwork(netConf *NetworkConfig, mainErrChan chan error) {
 			mainErrChan <- err
 		}
 		for _, address := range netConf.Addresses {
-			err = checkAddress(client, address, netConf.LowerLimit)
+			err = checkAddress(client, netConf.Name, address, netConf.LowerLimit)
 			if err != nil {
 				mainErrChan <- err
 			}
@@ -90,7 +94,7 @@ func monitorNetwork(netConf *NetworkConfig, mainErrChan chan error) {
 }
 
 // checks a provided address with a provided client once, notifying if the balance is too low
-func checkAddress(client *ethclient.Client, addressString string, lowerLimit float64) error {
+func checkAddress(client *ethclient.Client, network, addressString string, lowerLimit float64) error {
 	address := common.HexToAddress(addressString)
 	bigBal, err := client.BalanceAt(context.Background(), address, nil)
 	if err != nil {
@@ -99,7 +103,9 @@ func checkAddress(client *ethclient.Client, addressString string, lowerLimit flo
 	balance := weiToEther(bigBal)
 	bigLowerLimit := big.NewFloat(lowerLimit * 1.0)
 	if balance.Cmp(bigLowerLimit) <= 0 {
-		notifyAddress(addressString, balance, bigLowerLimit)
+		if err = notifyAddress(network, addressString, balance, bigLowerLimit); err != nil {
+			log.Error().Err(err).Msg("Error trying to notify of under-funded address")
+		}
 		log.Warn().
 			Str("Lower Limit", bigLowerLimit.String()).
 			Str("Balance", balance.String()).

@@ -17,7 +17,7 @@ type Config struct {
 	NetworkPrefixes []string         `envconfig:"NETWORK_PREFIXES"`
 	SlackAPIKey     string           `envconfig:"SLACK_API_KEY"`
 	SlackChannel    string           `envconfig:"SLACK_CHANNEL"`
-	SlackUsers      []string         `envconfig:"SLACK_USER"`
+	SlackUser       string           `envconfig:"SLACK_USER"`
 	NetworkConfigs  []*NetworkConfig `ignored:"true"`
 }
 

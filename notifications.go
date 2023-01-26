@@ -3,70 +3,150 @@ package main
 import (
 	"fmt"
 	"math/big"
+	"strings"
 
-	"github.com/slack-go/slack"
+	"github.com/go-resty/resty/v2"
 )
 
 // notifyStart sends a slack message to notify when the program starts
 func notifyStart() error {
-	notificationBlocks := []slack.Block{}
-	notificationBlocks = append(notificationBlocks, slack.NewTextBlockObject("mrkdwn", "# Started Monitoring Addresses", true, false))
-	if len(GlobalConfig.SlackUsers) > 0 {
-		userNoti := "Notifying"
-		for _, user := range GlobalConfig.SlackUsers {
-			userNoti = fmt.Sprintf("%s <@%s>", userNoti, user)
-		}
-		notificationBlocks = append(notificationBlocks, slack.NewSectionBlock(slack.NewTextBlockObject("mrkdwn", userNoti, false, true), nil, nil))
-	}
-
-	notificationBlocks = append(notificationBlocks, slack.NewDividerBlock())
-
+	restClient := resty.New()
+	netsArr := []string{}
 	for _, netConf := range GlobalConfig.NetworkConfigs {
-		netText := fmt.Sprintf("### %s\nLower Limit: %f", netConf.Name, netConf.LowerLimit)
+		addrs := []string{fmt.Sprintf("*%s*\n", netConf.Name)}
 		for _, addr := range netConf.Addresses {
-			netText = fmt.Sprintf("%s\n* %s\n", netText, addr)
+			addrs = append(addrs, fmt.Sprintf("• %s", addr))
 		}
-		notificationBlocks = append(notificationBlocks, slack.NewTextBlockObject("mrkdwn", netText, true, false))
+		addrsStr := fmt.Sprintf(notifyStartNetwork, strings.Join(addrs, "\n"))
+		netsArr = append(netsArr, addrsStr)
 	}
+	payload := fmt.Sprintf(notifyStartPayload, GlobalConfig.SlackChannel, GlobalConfig.SlackUser, strings.Join(netsArr, ",\n"))
 
-	slackClient := slack.New(GlobalConfig.SlackAPIKey)
-	msgOptionBlocks := []slack.MsgOption{slack.MsgOptionBlocks(notificationBlocks...), slack.MsgOptionAsUser(true)}
-	_, _, err := slackClient.PostMessage(GlobalConfig.SlackChannel, msgOptionBlocks...)
+	_, err := restClient.R().
+		SetHeader("Content-Type", "application/json; charset=utf-8").
+		SetBody(payload).
+		SetAuthToken(GlobalConfig.SlackAPIKey).
+		Post(slackAPIURL)
+
 	return err
 }
 
 // notifyStop sends a slack message notifying when the program has stopped running
 func notifyStop() error {
-	notificationBlocks := []slack.Block{}
-	notificationBlocks = append(notificationBlocks, slack.NewTextBlockObject("mrkdwn", "# :x: Stopped Monitoring Addresses! :x:", true, false))
-	if len(GlobalConfig.SlackUsers) > 0 {
-		userNoti := "Notifying"
-		for _, user := range GlobalConfig.SlackUsers {
-			userNoti = fmt.Sprintf("%s <@%s>", userNoti, user)
-		}
-		notificationBlocks = append(notificationBlocks, slack.NewSectionBlock(slack.NewTextBlockObject("mrkdwn", userNoti, false, true), nil, nil))
-	}
+	restClient := resty.New()
 
-	slackClient := slack.New(GlobalConfig.SlackAPIKey)
-	msgOptionBlocks := []slack.MsgOption{slack.MsgOptionBlocks(notificationBlocks...), slack.MsgOptionAsUser(true)}
-	_, _, err := slackClient.PostMessage(GlobalConfig.SlackChannel, msgOptionBlocks...)
+	payload := fmt.Sprintf(notifyStopPayload, GlobalConfig.SlackChannel, GlobalConfig.SlackUser)
+	_, err := restClient.R().
+		SetHeader("Content-Type", "application/json; charset=utf-8").
+		SetBody(payload).
+		SetAuthToken(GlobalConfig.SlackAPIKey).
+		Post(slackAPIURL)
 	return err
 }
 
 // notifyAddress sends a slack message notifying when an address is low
-func notifyAddress(address string, balance, limit *big.Float) error {
-	notificationBlocks := []slack.Block{}
-	notificationBlocks = append(notificationBlocks,
-		slack.NewTextBlockObject("mrkdwn",
-			fmt.Sprintf("# :warning: Address Under-Funded :warning:\n\nAddress: %s | Balance: %s | Lower Limit: %s",
-				address, balance.String(), limit.String(),
-			),
-			true, false,
-		),
-	)
+func notifyAddress(network, address string, balance, limit *big.Float) error {
+	restClient := resty.New()
 
-	slackClient := slack.New(GlobalConfig.SlackAPIKey)
-	msgOptionBlocks := []slack.MsgOption{slack.MsgOptionBlocks(notificationBlocks...), slack.MsgOptionAsUser(true)}
-	_, _, err := slackClient.PostMessage(GlobalConfig.SlackChannel, msgOptionBlocks...)
+	payload := fmt.Sprintf(
+		notifyAddressPayload,
+		GlobalConfig.SlackChannel,
+		GlobalConfig.SlackUser,
+		network,
+		address,
+		balance.String(),
+		limit.String(),
+	)
+	_, err := restClient.R().
+		SetHeader("Content-Type", "application/json; charset=utf-8").
+		SetBody(payload).
+		SetAuthToken(GlobalConfig.SlackAPIKey).
+		Post(slackAPIURL)
 	return err
 }
+
+const (
+	slackAPIURL        = "https://slack.com/api/chat.postMessage"
+	notifyStartPayload = `{
+	"channel": "%s",
+	"blocks": [
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": ":white_check_mark: Started Monitoring Addresses :white_check_mark:",
+				"emoji": true
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Notifying <@%s>"
+			}
+		},
+		{
+			"type": "divider"
+		},
+		%s
+	]
+}`
+	notifyStartNetwork = `{
+	"type": "section",
+	"text": {
+		"type": "mrkdwn",
+		"text": "%s"
+	}
+},
+{
+	"type": "divider"
+}`
+
+	notifyStopPayload = `{
+	"channel": "%s",
+	"blocks": [
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": ":x: Monitoring Stopped :x:",
+				"emoji": true
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Notifying <@%s>"
+			}
+		}
+	]
+}`
+	notifyAddressPayload = `{
+		"channel": "%s",
+		"blocks": [
+			{
+				"type": "header",
+				"text": {
+					"type": "plain_text",
+					"text": ":warning: Found Under-Funded Address :warning:",
+					"emoji": true
+				}
+			},
+			{
+				"type": "section",
+				"text": {
+					"type": "mrkdwn",
+					"text": "Notifying <@%s>"
+				}
+			},
+			{
+				"type": "section",
+				"text": {
+					"type": "mrkdwn",
+					"text": "Network: %s\nAddress: %s\nBalance: %s ETH\nLimit: %s"
+				}
+			}
+		]
+	}`
+)
