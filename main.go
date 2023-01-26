@@ -47,7 +47,10 @@ func main() {
 		c.Close()
 		go monitorNetwork(networkConf, mainErrChan)
 	}
-	notifyStart()
+	err = notifyStart()
+	if err != nil {
+		mainErrChan <- err
+	}
 
 	signal.Notify(terminationChan, syscall.SIGINT, syscall.SIGTERM)
 	for {
@@ -71,19 +74,16 @@ func monitorNetwork(netConf *NetworkConfig, mainErrChan chan error) {
 		Msg("Monitoring Network")
 	pollInterval := time.NewTicker(netConf.PollInterval)
 
-	for {
-		select {
-		case <-pollInterval.C:
-			log.Info().Str("Network", netConf.Name).Msg("Checking Addresses")
-			client, err := ethclient.Dial(netConf.URL)
+	for range pollInterval.C {
+		log.Info().Str("Network", netConf.Name).Msg("Checking Addresses")
+		client, err := ethclient.Dial(netConf.URL)
+		if err != nil {
+			mainErrChan <- err
+		}
+		for _, address := range netConf.Addresses {
+			err = checkAddress(client, address, netConf.LowerLimit)
 			if err != nil {
 				mainErrChan <- err
-			}
-			for _, address := range netConf.Addresses {
-				err = checkAddress(client, address, netConf.LowerLimit)
-				if err != nil {
-					mainErrChan <- err
-				}
 			}
 		}
 	}
