@@ -19,10 +19,12 @@ const (
 	EthMult uint64 = 1e18
 )
 
+// Initialize logging
 func init() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 }
 
+// Starts monitoring and waits for issues
 func main() {
 	log.Info().Msg("Starting")
 	err := loadConfig()
@@ -45,13 +47,22 @@ func main() {
 		c.Close()
 		go monitorNetwork(networkConf, mainErrChan)
 	}
+	if err = notifyStart(); err != nil {
+		mainErrChan <- err
+	}
 
 	signal.Notify(terminationChan, syscall.SIGINT, syscall.SIGTERM)
 	for {
 		select {
-		case err = <-mainErrChan:
-			log.Fatal().Err(err).Msg("Unrecoverable Error Monitoring Chain")
+		case mainErr := <-mainErrChan:
+			if err = notifyStop(); err != nil {
+				log.Error().Err(err).Msg("Error while trying to notify of stopped runner")
+			}
+			log.Fatal().Err(mainErr).Msg("Unrecoverable Error Monitoring Chain")
 		case <-terminationChan:
+			if err = notifyStop(); err != nil {
+				log.Error().Err(err).Msg("Error while trying to notify of stopped runner")
+			}
 			log.Fatal().Msg("Monitoring Killed!")
 		}
 	}
@@ -67,26 +78,23 @@ func monitorNetwork(netConf *NetworkConfig, mainErrChan chan error) {
 		Msg("Monitoring Network")
 	pollInterval := time.NewTicker(netConf.PollInterval)
 
-	for {
-		select {
-		case <-pollInterval.C:
-			log.Info().Str("Network", netConf.Name).Msg("Checking Addresses")
-			client, err := ethclient.Dial(netConf.URL)
+	for range pollInterval.C {
+		log.Info().Str("Network", netConf.Name).Msg("Checking Addresses")
+		client, err := ethclient.Dial(netConf.URL)
+		if err != nil {
+			mainErrChan <- err
+		}
+		for _, address := range netConf.Addresses {
+			err = checkAddress(client, netConf.Name, address, netConf.LowerLimit)
 			if err != nil {
 				mainErrChan <- err
-			}
-			for _, address := range netConf.Addresses {
-				err = checkAddress(client, address, netConf.LowerLimit)
-				if err != nil {
-					mainErrChan <- err
-				}
 			}
 		}
 	}
 }
 
 // checks a provided address with a provided client once, notifying if the balance is too low
-func checkAddress(client *ethclient.Client, addressString string, lowerLimit float64) error {
+func checkAddress(client *ethclient.Client, network, addressString string, lowerLimit float64) error {
 	address := common.HexToAddress(addressString)
 	bigBal, err := client.BalanceAt(context.Background(), address, nil)
 	if err != nil {
@@ -95,6 +103,9 @@ func checkAddress(client *ethclient.Client, addressString string, lowerLimit flo
 	balance := weiToEther(bigBal)
 	bigLowerLimit := big.NewFloat(lowerLimit * 1.0)
 	if balance.Cmp(bigLowerLimit) <= 0 {
+		if err = notifyAddress(network, addressString, balance, bigLowerLimit); err != nil {
+			log.Error().Err(err).Msg("Error trying to notify of under-funded address")
+		}
 		log.Warn().
 			Str("Lower Limit", bigLowerLimit.String()).
 			Str("Balance", balance.String()).
@@ -109,6 +120,7 @@ func checkAddress(client *ethclient.Client, addressString string, lowerLimit flo
 	return nil
 }
 
+// weiToEther gives a quick conversion of wei units to ETH for better readability
 func weiToEther(wei *big.Int) *big.Float {
 	return new(big.Float).Quo(new(big.Float).SetInt(wei), big.NewFloat(params.Ether))
 }
