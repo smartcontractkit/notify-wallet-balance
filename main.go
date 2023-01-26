@@ -19,10 +19,12 @@ const (
 	EthMult uint64 = 1e18
 )
 
+// Initialize logging
 func init() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 }
 
+// Starts monitoring and waits for issues
 func main() {
 	log.Info().Msg("Starting")
 	err := loadConfig()
@@ -45,6 +47,7 @@ func main() {
 		c.Close()
 		go monitorNetwork(networkConf, mainErrChan)
 	}
+	notifyStart()
 
 	signal.Notify(terminationChan, syscall.SIGINT, syscall.SIGTERM)
 	for {
@@ -52,6 +55,7 @@ func main() {
 		case err = <-mainErrChan:
 			log.Fatal().Err(err).Msg("Unrecoverable Error Monitoring Chain")
 		case <-terminationChan:
+			notifyStop()
 			log.Fatal().Msg("Monitoring Killed!")
 		}
 	}
@@ -95,6 +99,7 @@ func checkAddress(client *ethclient.Client, addressString string, lowerLimit flo
 	balance := weiToEther(bigBal)
 	bigLowerLimit := big.NewFloat(lowerLimit * 1.0)
 	if balance.Cmp(bigLowerLimit) <= 0 {
+		notifyAddress(addressString, balance, bigLowerLimit)
 		log.Warn().
 			Str("Lower Limit", bigLowerLimit.String()).
 			Str("Balance", balance.String()).
@@ -109,6 +114,7 @@ func checkAddress(client *ethclient.Client, addressString string, lowerLimit flo
 	return nil
 }
 
+// weiToEther gives a quick conversion of wei units to ETH for better readability
 func weiToEther(wei *big.Int) *big.Float {
 	return new(big.Float).Quo(new(big.Float).SetInt(wei), big.NewFloat(params.Ether))
 }

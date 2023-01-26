@@ -7,6 +7,7 @@ require (
 	github.com/joho/godotenv v1.4.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/rs/zerolog v1.28.0
+	github.com/slack-go/slack v0.12.1
 )
 
 require (

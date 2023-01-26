@@ -9,13 +9,19 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// GlobalConfig holds the configuration for the full program
 var GlobalConfig Config
 
+// Config is the primary config for the program
 type Config struct {
 	NetworkPrefixes []string         `envconfig:"NETWORK_PREFIXES"`
+	SlackAPIKey     string           `envconfig:"SLACK_API_KEY"`
+	SlackChannel    string           `envconfig:"SLACK_CHANNEL"`
+	SlackUsers      []string         `envconfig:"SLACK_USER"`
 	NetworkConfigs  []*NetworkConfig `ignored:"true"`
 }
 
+// NetworkConfig represents a network and its addresses to check
 type NetworkConfig struct {
 	Name         string        `ignored:"true"`
 	URL          string        `envconfig:"URL"`
@@ -24,6 +30,7 @@ type NetworkConfig struct {
 	PollInterval time.Duration `envconfig:"POLL_INTERVAL"`
 }
 
+// loadConfig loads in the config defined by environment variables
 func loadConfig() error {
 	err := godotenv.Load()
 	if err != nil {
