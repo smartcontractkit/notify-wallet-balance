@@ -8,6 +8,14 @@ A basic micro service to track wallet addresses on different chains, and notify 
 
 Configuration is done entirely through environment variables.
 
+The app can notify you through slack. To do so, you need to install your own slack bot, and use its auth.
+
+```bash
+SLACK_API_KEY="xoxb-abc" ## Slack API key for bot
+SLACK_CHANNEL="C123" ## Slack Channel to send messages to
+SLACK_USER="U111" ## Slack User ID to notify for slack messages
+```
+
 Set which networks you would like to check on with `NETWORK_PREFIXES`.
 
 ```bash
