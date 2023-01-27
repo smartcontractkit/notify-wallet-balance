@@ -15,10 +15,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const (
-	EthMult uint64 = 1e18
-)
-
 // Initialize logging
 func init() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
