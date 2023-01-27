@@ -37,3 +37,13 @@ OPTIMISM_GOERLI_ADDRESSES="0xaaa,0xbbb"
 OPTIMISM_GOERLI_LOWER_LIMIT=10
 OPTIMISM_GOERLI_POLL_INTERVAL="10m" 
 ```
+
+## Run
+
+When running locally, you can use plain go.
+
+```sh
+go run .
+```
+
+A docker image can be found at [kalverra/notify-wallet-balance](https://hub.docker.com/repository/docker/kalverra/notify-wallet-balance/general).
