@@ -34,7 +34,10 @@ type NetworkConfig struct {
 func loadConfig() error {
 	err := godotenv.Load()
 	if err != nil {
-		log.Debug().Err(err).Str("Hint", "If seeing this in prod, it's usually normal").Msg("Error reading .env file")
+		log.Debug().
+			Err(err).
+			Str("Hint", "This is normal in prod deployment, unless you did intend to include a .env file").
+			Msg("Error reading .env file")
 	}
 	err = envconfig.Process("", &GlobalConfig)
 	if err != nil {
