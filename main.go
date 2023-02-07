@@ -99,7 +99,7 @@ func checkAddress(client *ethclient.Client, netConf *NetworkConfig, addressStrin
 	balance := weiToEther(bigBal)
 	bigLowerLimit := big.NewFloat(netConf.LowerLimit * 1.0)
 	if balance.Cmp(bigLowerLimit) <= 0 {
-		if err = notifyAddress(network, addressString, balance, bigLowerLimit); err != nil {
+		if err = notifyAddress(netConf, addressString, balance, bigLowerLimit); err != nil {
 			log.Error().Err(err).Msg("Error trying to notify of under-funded address")
 		}
 		log.Warn().
