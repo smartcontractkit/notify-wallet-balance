@@ -10,6 +10,9 @@ import (
 
 // notifyStart sends a slack message to notify when the program starts
 func notifyStart() error {
+	if !GlobalConfig.NotifyMonitoringState {
+		return nil
+	}
 	restClient := resty.New()
 	netsArr := []string{}
 	for _, netConf := range GlobalConfig.NetworkConfigs {
@@ -33,6 +36,9 @@ func notifyStart() error {
 
 // notifyStop sends a slack message notifying when the program has stopped running
 func notifyStop() error {
+	if !GlobalConfig.NotifyMonitoringState {
+		return nil
+	}
 	restClient := resty.New()
 
 	payload := fmt.Sprintf(notifyStopPayload, GlobalConfig.SlackChannel, GlobalConfig.SlackUser)

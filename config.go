@@ -14,11 +14,12 @@ var GlobalConfig Config
 
 // Config is the primary config for the program
 type Config struct {
-	NetworkPrefixes []string         `envconfig:"NETWORK_PREFIXES"`
-	SlackAPIKey     string           `envconfig:"SLACK_API_KEY"`
-	SlackChannel    string           `envconfig:"SLACK_CHANNEL"`
-	SlackUser       string           `envconfig:"SLACK_USER"`
-	NetworkConfigs  []*NetworkConfig `ignored:"true"`
+	NotifyMonitoringState bool             `envconfig:"NOTIFY_MONITORING_STATE"`
+	NetworkPrefixes       []string         `envconfig:"NETWORK_PREFIXES"`
+	SlackAPIKey           string           `envconfig:"SLACK_API_KEY"`
+	SlackChannel          string           `envconfig:"SLACK_CHANNEL"`
+	SlackUser             string           `envconfig:"SLACK_USER"`
+	NetworkConfigs        []*NetworkConfig `ignored:"true"`
 }
 
 // NetworkConfig represents a network and its addresses to check
