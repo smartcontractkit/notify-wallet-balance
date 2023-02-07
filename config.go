@@ -27,8 +27,9 @@ type NetworkConfig struct {
 	Name         string        `ignored:"true"`
 	URL          string        `envconfig:"URL"`
 	Addresses    []string      `envconfig:"ADDRESSES"`
-	LowerLimit   float64       `envconfig:"LOWER_LIMIT"`
-	PollInterval time.Duration `envconfig:"POLL_INTERVAL"`
+	LowerLimit   float64       `envconfig:"LOWER_LIMIT" default:"10"`
+	PollInterval time.Duration `envconfig:"POLL_INTERVAL" default:"30m"`
+	SlackUser    string        `envconfig:"SLACK_USER"`
 }
 
 // loadConfig loads in the config defined by environment variables
