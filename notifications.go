@@ -51,14 +51,18 @@ func notifyStop() error {
 }
 
 // notifyAddress sends a slack message notifying when an address is low
-func notifyAddress(network, address string, balance, limit *big.Float) error {
+func notifyAddress(netConf *NetworkConfig, address string, balance, limit *big.Float) error {
 	restClient := resty.New()
+	slackUser := GlobalConfig.SlackUser
+	if netConf.SlackUser != "" {
+		slackUser = netConf.SlackUser
+	}
 
 	payload := fmt.Sprintf(
 		notifyAddressPayload,
 		GlobalConfig.SlackChannel,
-		GlobalConfig.SlackUser,
-		network,
+		slackUser,
+		netConf.Name,
 		address,
 		balance.String(),
 		limit.String(),

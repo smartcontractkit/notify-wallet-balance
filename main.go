@@ -81,7 +81,7 @@ func monitorNetwork(netConf *NetworkConfig, mainErrChan chan error) {
 			mainErrChan <- err
 		}
 		for _, address := range netConf.Addresses {
-			err = checkAddress(client, netConf.Name, address, netConf.LowerLimit)
+			err = checkAddress(client, netConf, address)
 			if err != nil {
 				mainErrChan <- err
 			}
@@ -90,14 +90,14 @@ func monitorNetwork(netConf *NetworkConfig, mainErrChan chan error) {
 }
 
 // checks a provided address with a provided client once, notifying if the balance is too low
-func checkAddress(client *ethclient.Client, network, addressString string, lowerLimit float64) error {
+func checkAddress(client *ethclient.Client, netConf *NetworkConfig, addressString string) error {
 	address := common.HexToAddress(addressString)
 	bigBal, err := client.BalanceAt(context.Background(), address, nil)
 	if err != nil {
 		return err
 	}
 	balance := weiToEther(bigBal)
-	bigLowerLimit := big.NewFloat(lowerLimit * 1.0)
+	bigLowerLimit := big.NewFloat(netConf.LowerLimit * 1.0)
 	if balance.Cmp(bigLowerLimit) <= 0 {
 		if err = notifyAddress(network, addressString, balance, bigLowerLimit); err != nil {
 			log.Error().Err(err).Msg("Error trying to notify of under-funded address")
