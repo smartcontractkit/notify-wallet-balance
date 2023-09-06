@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -89,6 +90,11 @@ func monitorNetwork(netConf *NetworkConfig, mainErrChan chan error) {
 	}
 }
 
+var (
+	lastNotified   = map[string]time.Time{}
+	lastNotifiedMu sync.Mutex
+)
+
 // checks a provided address with a provided client once, notifying if the balance is too low
 func checkAddress(client *ethclient.Client, netConf *NetworkConfig, addressString string) error {
 	address := common.HexToAddress(addressString)
@@ -99,13 +105,34 @@ func checkAddress(client *ethclient.Client, netConf *NetworkConfig, addressStrin
 	balance := weiToEther(bigBal)
 	bigLowerLimit := big.NewFloat(netConf.LowerLimit * 1.0)
 	if balance.Cmp(bigLowerLimit) <= 0 {
-		if err = notifyAddress(netConf, addressString, balance, bigLowerLimit); err != nil {
-			log.Error().Err(err).Msg("Error trying to notify of under-funded address")
-		}
 		log.Warn().
 			Str("Lower Limit", bigLowerLimit.String()).
 			Str("Balance", balance.String()).
+			Str("Network", netConf.Name).
 			Msg("Address Below Limit!")
+
+		// Check if we should actually notify
+		lastNotifiedMu.Lock()
+		notificationKey := netConf.Name + addressString
+		if lastNotification, ok := lastNotified[notificationKey]; ok {
+			if time.Since(lastNotification) <= GlobalConfig.NotificationInterval {
+				lastNotifiedMu.Unlock()
+				log.Debug().
+					Str("Network", netConf.Name).
+					Str("Address", addressString).
+					Str("Since Last Notification", time.Since(lastNotification).String()).
+					Str("Notification Interval", GlobalConfig.NotificationInterval.String()).
+					Msg("Not notifying yet")
+				return nil
+			}
+		}
+		lastNotified[notificationKey] = time.Now()
+		lastNotifiedMu.Unlock()
+
+		if err = notifyAddress(netConf, addressString, balance, bigLowerLimit); err != nil {
+			log.Error().Err(err).Msg("Error trying to notify of under-funded address")
+		}
+
 	} else {
 		log.Debug().
 			Str("Lower Limit", bigLowerLimit.String()).

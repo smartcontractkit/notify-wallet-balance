@@ -19,6 +19,7 @@ type Config struct {
 	SlackAPIKey           string           `envconfig:"SLACK_API_KEY"`
 	SlackChannel          string           `envconfig:"SLACK_CHANNEL"`
 	SlackUser             string           `envconfig:"SLACK_USER"`
+	NotificationInterval  time.Duration    `envconfig:"NOTIFICATION_INTERVAL" default:"4h"`
 	NetworkConfigs        []*NetworkConfig `ignored:"true"`
 }
 
@@ -26,6 +27,7 @@ type Config struct {
 type NetworkConfig struct {
 	Name         string        `ignored:"true"`
 	URL          string        `envconfig:"URL"`
+	ExplorerURL  string        `envconfig:"EXPLORER_URL"`
 	Addresses    []string      `envconfig:"ADDRESSES"`
 	LowerLimit   float64       `envconfig:"LOWER_LIMIT" default:"10"`
 	PollInterval time.Duration `envconfig:"POLL_INTERVAL" default:"30m"`
