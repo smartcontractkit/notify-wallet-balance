@@ -19,17 +19,18 @@ type Config struct {
 	SlackAPIKey           string           `envconfig:"SLACK_API_KEY"`
 	SlackChannel          string           `envconfig:"SLACK_CHANNEL"`
 	SlackUser             string           `envconfig:"SLACK_USER"`
+	NotificationInterval  time.Duration    `envconfig:"NOTIFICATION_INTERVAL" default:"4h"`
 	NetworkConfigs        []*NetworkConfig `ignored:"true"`
 }
 
 // NetworkConfig represents a network and its addresses to check
 type NetworkConfig struct {
-	Name         string        `ignored:"true"`
-	URL          string        `envconfig:"URL"`
-	Addresses    []string      `envconfig:"ADDRESSES"`
-	LowerLimit   float64       `envconfig:"LOWER_LIMIT" default:"10"`
-	PollInterval time.Duration `envconfig:"POLL_INTERVAL" default:"30m"`
-	SlackUser    string        `envconfig:"SLACK_USER"`
+	Name        string   `ignored:"true"`
+	URL         string   `envconfig:"URL"`
+	ExplorerURL string   `envconfig:"EXPLORER_URL"`
+	Addresses   []string `envconfig:"ADDRESSES"`
+	LowerLimit  float64  `envconfig:"LOWER_LIMIT" default:"10"`
+	SlackUser   string   `envconfig:"SLACK_USER"`
 }
 
 // loadConfig loads in the config defined by environment variables
@@ -45,7 +46,10 @@ func loadConfig() error {
 	if err != nil {
 		return err
 	}
-	log.Debug().Interface("Prefixes", GlobalConfig.NetworkPrefixes).Msg("Loaded Global Config")
+	log.Info().
+		Interface("Prefixes", GlobalConfig.NetworkPrefixes).
+		Str("Notification Interval", GlobalConfig.NotificationInterval.String()).
+		Msg("Loaded Global Config")
 	if len(GlobalConfig.NetworkPrefixes) == 0 {
 		return fmt.Errorf("found no network prefixes")
 	}

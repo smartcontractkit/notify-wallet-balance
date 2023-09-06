@@ -58,6 +58,10 @@ func notifyAddress(netConf *NetworkConfig, address string, balance, limit *big.F
 		slackUser = netConf.SlackUser
 	}
 
+	if netConf.ExplorerURL != "" {
+		address = fmt.Sprintf("<%s/address/%s|%s>", netConf.ExplorerURL, address, address)
+	}
+
 	payload := fmt.Sprintf(
 		notifyAddressPayload,
 		GlobalConfig.SlackChannel,

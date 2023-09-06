@@ -27,7 +27,6 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error loading config")
 	}
-	log.Info().Msg("Loaded Config")
 
 	terminationChan := make(chan os.Signal, 1)
 	mainErrChan := make(chan error, 1)
@@ -67,12 +66,11 @@ func main() {
 // monitorNetwork polls addresses based on the network's poll interval
 func monitorNetwork(netConf *NetworkConfig, mainErrChan chan error) {
 	log.Info().
-		Str("Poll Interval", netConf.PollInterval.String()).
 		Interface("Addresses", netConf.Addresses).
 		Str("URL", netConf.URL).
 		Str("Network", netConf.Name).
 		Msg("Monitoring Network")
-	pollInterval := time.NewTicker(netConf.PollInterval)
+	pollInterval := time.NewTicker(GlobalConfig.NotificationInterval)
 
 	for range pollInterval.C {
 		log.Info().Str("Network", netConf.Name).Msg("Checking Addresses")
@@ -99,13 +97,16 @@ func checkAddress(client *ethclient.Client, netConf *NetworkConfig, addressStrin
 	balance := weiToEther(bigBal)
 	bigLowerLimit := big.NewFloat(netConf.LowerLimit * 1.0)
 	if balance.Cmp(bigLowerLimit) <= 0 {
-		if err = notifyAddress(netConf, addressString, balance, bigLowerLimit); err != nil {
-			log.Error().Err(err).Msg("Error trying to notify of under-funded address")
-		}
 		log.Warn().
 			Str("Lower Limit", bigLowerLimit.String()).
 			Str("Balance", balance.String()).
+			Str("Network", netConf.Name).
 			Msg("Address Below Limit!")
+
+		if err = notifyAddress(netConf, addressString, balance, bigLowerLimit); err != nil {
+			log.Error().Err(err).Msg("Error trying to notify of under-funded address")
+		}
+
 	} else {
 		log.Debug().
 			Str("Lower Limit", bigLowerLimit.String()).
