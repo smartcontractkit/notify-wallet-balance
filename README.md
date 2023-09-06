@@ -14,7 +14,7 @@ The app can notify you through slack. To do so, you need to install your own sla
 SLACK_API_KEY="xoxb-abc" ## Slack API key for bot
 SLACK_CHANNEL="C123" ## Slack Channel to send messages to
 SLACK_USER="U111" ## Slack User ID to notify for slack messages
-NOTIFICATION_INTERVAL="4h" ## How long to wait between Slack notifications so you don't wake up to 100s of pings
+NOTIFICATION_INTERVAL="4h" ## How often to check and notify
 ```
 
 Set which networks you would like to check on with `NETWORK_PREFIXES`.
@@ -30,14 +30,12 @@ Each Network listed is used as a prefix for other env vars.
 ARBITRUM_GOERLI_URL="wss://goerli-url" ## Websocket URL for the network
 ARBITRUM_GOERLI_ADDRESSES="0xaaa,0xbbb" ## List of addresses to monitor
 ARBITRUM_GOERLI_LOWER_LIMIT=30 ## How many ETH to consider worth notifying about a low balance
-ARBITRUM_GOERLI_POLL_INTERVAL="30m" ## Time string on how often to check the address balances
 ARBITRUM_GOERLI_EXPLORER_URL="https://goerli.arbiscan.io/" ## URL to explorer if available for convenient links
 
 # Optimism Goerli
 OPTIMISM_GOERLI_URL="wss://optimism-url"
 OPTIMISM_GOERLI_ADDRESSES="0xaaa,0xbbb"
 OPTIMISM_GOERLI_LOWER_LIMIT=10
-OPTIMISM_GOERLI_POLL_INTERVAL="10m" 
 OPTIMISM_GOERLI_EXPLORER_URL="https://goerli-optimism.etherscan.io/"
 ```
 

@@ -5,7 +5,6 @@ import (
 	"math/big"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
@@ -28,7 +27,6 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error loading config")
 	}
-	log.Info().Msg("Loaded Config")
 
 	terminationChan := make(chan os.Signal, 1)
 	mainErrChan := make(chan error, 1)
@@ -68,12 +66,11 @@ func main() {
 // monitorNetwork polls addresses based on the network's poll interval
 func monitorNetwork(netConf *NetworkConfig, mainErrChan chan error) {
 	log.Info().
-		Str("Poll Interval", netConf.PollInterval.String()).
 		Interface("Addresses", netConf.Addresses).
 		Str("URL", netConf.URL).
 		Str("Network", netConf.Name).
 		Msg("Monitoring Network")
-	pollInterval := time.NewTicker(netConf.PollInterval)
+	pollInterval := time.NewTicker(GlobalConfig.NotificationInterval)
 
 	for range pollInterval.C {
 		log.Info().Str("Network", netConf.Name).Msg("Checking Addresses")
@@ -90,11 +87,6 @@ func monitorNetwork(netConf *NetworkConfig, mainErrChan chan error) {
 	}
 }
 
-var (
-	lastNotified   = map[string]time.Time{}
-	lastNotifiedMu sync.Mutex
-)
-
 // checks a provided address with a provided client once, notifying if the balance is too low
 func checkAddress(client *ethclient.Client, netConf *NetworkConfig, addressString string) error {
 	address := common.HexToAddress(addressString)
@@ -110,24 +102,6 @@ func checkAddress(client *ethclient.Client, netConf *NetworkConfig, addressStrin
 			Str("Balance", balance.String()).
 			Str("Network", netConf.Name).
 			Msg("Address Below Limit!")
-
-		// Check if we should actually notify
-		lastNotifiedMu.Lock()
-		notificationKey := netConf.Name + addressString
-		if lastNotification, ok := lastNotified[notificationKey]; ok {
-			if time.Since(lastNotification) <= GlobalConfig.NotificationInterval {
-				lastNotifiedMu.Unlock()
-				log.Debug().
-					Str("Network", netConf.Name).
-					Str("Address", addressString).
-					Str("Since Last Notification", time.Since(lastNotification).String()).
-					Str("Notification Interval", GlobalConfig.NotificationInterval.String()).
-					Msg("Not notifying yet")
-				return nil
-			}
-		}
-		lastNotified[notificationKey] = time.Now()
-		lastNotifiedMu.Unlock()
 
 		if err = notifyAddress(netConf, addressString, balance, bigLowerLimit); err != nil {
 			log.Error().Err(err).Msg("Error trying to notify of under-funded address")
