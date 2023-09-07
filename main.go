@@ -72,17 +72,23 @@ func monitorNetwork(netConf *NetworkConfig, mainErrChan chan error) {
 		Msg("Monitoring Network")
 	pollInterval := time.NewTicker(GlobalConfig.NotificationInterval)
 
+	pollAddress(netConf, mainErrChan)
 	for range pollInterval.C {
-		log.Info().Str("Network", netConf.Name).Msg("Checking Addresses")
-		client, err := ethclient.Dial(netConf.URL)
+		pollAddress(netConf, mainErrChan)
+	}
+}
+
+// pollAddress polls a network's addresses once for checking its funds
+func pollAddress(netConf *NetworkConfig, mainErrChan chan error) {
+	log.Info().Str("Network", netConf.Name).Msg("Checking Addresses")
+	client, err := ethclient.Dial(netConf.URL)
+	if err != nil {
+		mainErrChan <- err
+	}
+	for _, address := range netConf.Addresses {
+		err = checkAddress(client, netConf, address)
 		if err != nil {
 			mainErrChan <- err
-		}
-		for _, address := range netConf.Addresses {
-			err = checkAddress(client, netConf, address)
-			if err != nil {
-				mainErrChan <- err
-			}
 		}
 	}
 }
