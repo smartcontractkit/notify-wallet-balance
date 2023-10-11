@@ -117,6 +117,7 @@ func checkAddress(client *ethclient.Client, netConf *NetworkConfig, addressStrin
 		log.Debug().
 			Str("Lower Limit", bigLowerLimit.String()).
 			Str("Balance", balance.String()).
+			Str("Network", netConf.Name).
 			Msg("Address Balance Fine")
 	}
 
